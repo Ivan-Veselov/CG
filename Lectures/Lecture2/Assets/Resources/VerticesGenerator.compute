@@ -1,4 +1,5 @@
 ﻿#define NOISE_VOLUME_SIZE 16
+#define BLOCK_SIZE 32
 
 #define DENSITY_BUFFER_SIZE_X (32 * 7 + 8)
 #define DENSITY_BUFFER_SIZE_Y (32 * 7 + 8)
@@ -140,7 +141,7 @@ void MarchingCubes(uint3 id : SV_DispatchThreadID) {
             
             float t = fa / (fa + fb);
             
-            triang.v[j].pos = lerp(a, b, t);
+            triang.v[j].pos = lerp(a, b, t) / BLOCK_SIZE;
             triang.v[j].norm = normalize(lerp(na, nb, t));
         }
         

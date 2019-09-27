@@ -216,9 +216,6 @@ public class MeshGenerator : MonoBehaviour
         
         // Upload mesh data to the GPU
         _mesh.UploadMeshData(false);
-
-        // GetComponent<Transform>().localScale = new Vector3(1.0f / blockSize, 1, 1.0f / blockSize);
-        GetComponent<Transform>().localScale = new Vector3(1, 1, 1) / blockSize;
     }
     
     /// <summary>
