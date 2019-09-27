@@ -25,9 +25,9 @@ public class MeshGenerator : MonoBehaviour
     
     private const int blockSize = 32;
         
-    private const int voxelsX = blockSize * 15;
-    private const int voxelsY = blockSize;
-    private const int voxelsZ = blockSize * 15;
+    private const int voxelsX = blockSize * 7;
+    private const int voxelsY = blockSize * 7;
+    private const int voxelsZ = blockSize * 7;
 
     private const int threadsInDimension = 8;
     
@@ -217,7 +217,8 @@ public class MeshGenerator : MonoBehaviour
         // Upload mesh data to the GPU
         _mesh.UploadMeshData(false);
 
-        GetComponent<Transform>().localScale = new Vector3(1.0f / blockSize, 1, 1.0f / blockSize);
+        // GetComponent<Transform>().localScale = new Vector3(1.0f / blockSize, 1, 1.0f / blockSize);
+        GetComponent<Transform>().localScale = new Vector3(1, 1, 1) / blockSize;
     }
     
     /// <summary>

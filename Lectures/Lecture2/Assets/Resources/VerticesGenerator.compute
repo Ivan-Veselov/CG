@@ -1,8 +1,8 @@
 ﻿#define NOISE_VOLUME_SIZE 16
 
-#define DENSITY_BUFFER_SIZE_X (32 * 15 + 8)
-#define DENSITY_BUFFER_SIZE_Y (32 + 8)
-#define DENSITY_BUFFER_SIZE_Z (32 * 15 + 8)
+#define DENSITY_BUFFER_SIZE_X (32 * 7 + 8)
+#define DENSITY_BUFFER_SIZE_Y (32 * 7 + 8)
+#define DENSITY_BUFFER_SIZE_Z (32 * 7 + 8)
 
 Texture3D<float> randomNoiseVolume0;
 Texture3D<float> randomNoiseVolume1;
@@ -40,7 +40,7 @@ void ComputeDensity(uint3 id : SV_DispatchThreadID) {
     float resolutionFactor = 2.0f;
     float3 samplePosition = resolutionFactor * (float3(pointCoordinates.xyz) + 0.5) / (NOISE_VOLUME_SIZE);
     
-    float density = -pointCoordinates.y;
+    float density = -pointCoordinates.y / float(2 * NOISE_VOLUME_SIZE);
     
     density += sampleLowNoise(randomNoiseVolume1, sampler_randomNoiseVolume0, samplePosition * 0.1600 * 1.021) * 0.32 * 1.16 / resolutionFactor;
     density += sampleLowNoise(randomNoiseVolume2, sampler_randomNoiseVolume0, samplePosition * 0.0800 * 0.985) * 0.64 * 1.12 / resolutionFactor;
