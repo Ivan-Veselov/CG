@@ -1,9 +1,11 @@
-﻿Shader "Custom/BrokenShader"
+﻿Shader "Custom/Triplanar"
 {
     Properties
     {
         _Color ("Color", Color) = (1,1,1,1)
-        _MainTex ("Albedo (RGB)", 2D) = "white" {}
+        _XYTex ("XY Albedo (RGB)", 2D) = "white" {}
+        _XZTex ("XZ Albedo (RGB)", 2D) = "white" {}
+        _YZTex ("YZ Albedo (RGB)", 2D) = "white" {}
         _Glossiness ("Smoothness", Range(0,1)) = 0.5
         _Metallic ("Metallic", Range(0,1)) = 0.0
     }
@@ -27,7 +29,7 @@
             struct v2f
             {
                 float4 pos : SV_POSITION;
-                float2 uv : TEXCOORD0;
+                float3 wpos : WORLD_POSITION;
                 fixed3 normal : NORMAL;
             };
 
@@ -35,21 +37,32 @@
             {
                 v2f o;
                 o.pos = UnityObjectToClipPos(v.vertex);
-                o.uv = v.texcoord;
+                o.wpos = v.vertex.xyz;
                 o.normal = UnityObjectToWorldNormal(v.normal);
                 return o;
             }
             
-            sampler2D _MainTex;
+            sampler2D _XYTex;
+            sampler2D _XZTex;
+            sampler2D _YZTex;
 
             fixed4 frag (v2f i) : SV_Target
             {
+                i.normal = normalize(i.normal);
+            
                 half nl = max(0, dot(i.normal, _WorldSpaceLightPos0.xyz));
                 half3 light = nl * _LightColor0;
                 light += ShadeSH9(half4(i.normal,1));
                 
-                fixed4 col = tex2D(_MainTex, i.uv);
+                fixed4 xySample = tex2D(_XYTex, i.wpos.xy);
+                fixed4 xzSample = tex2D(_XZTex, i.wpos.xz);
+                fixed4 yzSample = tex2D(_YZTex, i.wpos.yz);
+                
+                fixed3 weights = i.normal * i.normal;
+                
+                fixed4 col = xySample * weights.z + xzSample * weights.y + yzSample * weights.x;
                 col.rgb *= light;
+                
                 return col;
             }
             ENDCG
