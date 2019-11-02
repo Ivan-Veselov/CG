@@ -5,7 +5,8 @@
         _BaseColor ("Color", Color) = (0, 0, 0, 1)
         _Roughness ("Roughness", Range(0.0001, 1)) = 1
         _Metallic ("Metallic", Range(0, 1)) = 1
-        _Cube ("Cubemap", CUBE) = "" {}
+        // _Cube ("Cubemap", CUBE) = "" {}
+        _EnvTex ("Environment", 2D) = "white" {}
     }
     SubShader
     {
@@ -68,10 +69,27 @@
                 return float(Hash(seed)) / 4294967295.0; // 2^32-1
             }
             
+            static const float PI = 3.14159265f;
+
+            static const float2 invPi = float2(0.5 / PI, 1 / PI);
+            float2 UnitSphereVectorToUV(float3 direction)
+            {
+                float2 uv = float2(atan2(direction.z, direction.x), asin(direction.y));
+                uv *= invPi;
+                uv += 0.5;
+
+                return uv;
+            }
+            
+            sampler2D _EnvTex;
+            
             float3 SampleColor(float3 direction)
             {   
-                half4 tex = texCUBE(_Cube, direction);
-                return DecodeHDR(tex, _Cube_HDR).rgb;
+                float2 uv = UnitSphereVectorToUV(normalize(direction));
+                return tex2Dlod(_EnvTex, float4(uv, 0, 0));
+                
+                // half4 tex = texCUBE(_Cube, direction);
+                // return DecodeHDR(tex, _Cube_HDR).rgb;
             }
 
             fixed4 frag (v2f i) : SV_Target
