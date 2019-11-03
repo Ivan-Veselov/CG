@@ -69,9 +69,10 @@
                 return float(Hash(seed)) / 4294967295.0; // 2^32-1
             }
             
-            static const float PI = 3.14159265f;
+            #define PI            3.14159265359f
+            #define INV_PI        0.31830988618f
 
-            static const float2 invPi = float2(0.5 / PI, 1 / PI);
+            static const float2 invPi = float2(0.5 * INV_PI, INV_PI);
             float2 UnitSphereVectorToUV(float3 direction)
             {
                 float2 uv = float2(atan2(direction.z, direction.x), asin(direction.y));
@@ -130,8 +131,8 @@
                     diffuse += sample * max(attenuation, 0);
                     specular += sample * pSpecular;
                 }
-                specular = (specular / sumPSpecular) * UNITY_PI / 2;
-                diffuse = (diffuse / sumPDiffuse) * UNITY_PI / 2;
+                specular = (specular / sumPSpecular) * 2;
+                diffuse = (diffuse / sumPDiffuse) * 2;
                 
                 return half4(lerp(_BaseColor.rgb * diffuse, specular, _Metallic), 1);
             }

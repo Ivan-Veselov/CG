@@ -105,8 +105,8 @@ void ComputeHarmonics(uint id : SV_DispatchThreadID)
         // times 1 / PI for diffuse brdf
         
         float zeroOrderCoeff = INV_PI;
-        float3 firstOrderCoeff = direction * 3 * INV_PI * float3(1, 1, -1);
-        float3 secondOrderCoeff1 = (direction.xyz * direction.yzx) * 15 * INV_PI * float3(-1, 1, 1);
+        float3 firstOrderCoeff = direction * 3 * INV_PI;
+        float3 secondOrderCoeff1 = (direction.xyz * direction.yzx) * 15 * INV_PI;
         float secondOrderCoeff2 = (3 * direction.z * direction.z - 1) * 5 * INV_PI * 0.25;
         float secondOrderCoeff3 = (direction.x * direction.x - direction.y * direction.y) * 15 * INV_PI * 0.25;
         
