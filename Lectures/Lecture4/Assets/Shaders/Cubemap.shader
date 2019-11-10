@@ -5,7 +5,8 @@
         _BaseColor ("Color", Color) = (0, 0, 0, 1)
         _Roughness ("Roughness", Range(0.0001, 1)) = 1
         _Metallic ("Metallic", Range(0, 1)) = 1
-        _Cube ("Cubemap", CUBE) = "" {}
+        // _Cube ("Cubemap", CUBE) = "" {}
+        _EnvTex ("Environment", 2D) = "white" {}
     }
     SubShader
     {
@@ -68,10 +69,28 @@
                 return float(Hash(seed)) / 4294967295.0; // 2^32-1
             }
             
+            #define PI            3.14159265359f
+            #define INV_PI        0.31830988618f
+
+            static const float2 invPi = float2(0.5 * INV_PI, INV_PI);
+            float2 UnitSphereVectorToUV(float3 direction)
+            {
+                float2 uv = float2(atan2(direction.z, direction.x), asin(direction.y));
+                uv *= invPi;
+                uv += 0.5;
+
+                return uv;
+            }
+            
+            sampler2D _EnvTex;
+            
             float3 SampleColor(float3 direction)
             {   
-                half4 tex = texCUBE(_Cube, direction);
-                return DecodeHDR(tex, _Cube_HDR).rgb;
+                float2 uv = UnitSphereVectorToUV(normalize(direction));
+                return tex2Dlod(_EnvTex, float4(uv, 0, 0));
+                
+                // half4 tex = texCUBE(_Cube, direction);
+                // return DecodeHDR(tex, _Cube_HDR).rgb;
             }
 
             fixed4 frag (v2f i) : SV_Target
@@ -112,8 +131,8 @@
                     diffuse += sample * max(attenuation, 0);
                     specular += sample * pSpecular;
                 }
-                specular = (specular / sumPSpecular) * UNITY_PI / 2;
-                diffuse = (diffuse / sumPDiffuse) * UNITY_PI / 2;
+                specular = (specular / sumPSpecular) * 2;
+                diffuse = (diffuse / sumPDiffuse) * 2;
                 
                 return half4(lerp(_BaseColor.rgb * diffuse, specular, _Metallic), 1);
             }

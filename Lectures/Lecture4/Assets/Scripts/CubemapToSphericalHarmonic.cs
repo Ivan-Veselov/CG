@@ -15,8 +15,7 @@ public class CubemapToSphericalHarmonic : MonoBehaviour
     
     public bool UseCompute;
     
-    
-    public Cubemap Env;
+    public Texture2D Env;
 
     public ComputeShader Compute;
     

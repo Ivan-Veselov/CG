@@ -69,6 +69,7 @@
                 res.b = dot(SH_0_1_b, normal);
                 
                 half4 vB = normal.xyzz * normal.yzxz;
+                vB.w = 3 * vB.w - 1;
                 res.r += dot(SH_2_r, vB);
                 res.g += dot(SH_2_g, vB);
                 res.b += dot(SH_2_b, vB);
