@@ -7,7 +7,7 @@ public class MarchingCubes
     /// </summary>
     public class Tables
     {
-        public static readonly byte[] CaseToTrianglesCount = new byte[]
+        public static readonly int[] CaseToTrianglesCount = new int[]
         {
             0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 2, 1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 3,
             1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 3, 2, 3, 3, 2, 3, 4, 4, 3, 3, 4, 4, 3, 4, 5, 5, 2,

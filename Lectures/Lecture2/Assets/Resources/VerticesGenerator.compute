@@ -1,0 +1,149 @@
+﻿#define NOISE_VOLUME_SIZE 16
+
+#define DENSITY_BUFFER_SIZE_X (32 * 7 + 8)
+#define DENSITY_BUFFER_SIZE_Y (32 * 7 + 8)
+#define DENSITY_BUFFER_SIZE_Z (32 * 7 + 8)
+
+Texture3D<float> randomNoiseVolume0;
+Texture3D<float> randomNoiseVolume1;
+Texture3D<float> randomNoiseVolume2;
+Texture3D<float> randomNoiseVolume3;
+
+RWStructuredBuffer<float> densityFunction;
+
+#define DENSITY_IN(id) densityFunction[id.x * DENSITY_BUFFER_SIZE_Y * DENSITY_BUFFER_SIZE_Z + id.y * DENSITY_BUFFER_SIZE_Z + id.z]
+
+SamplerState sampler_randomNoiseVolume0;
+
+float makeSigned(float value) {
+    return 2.0 * value - 1;
+}
+
+float sampleLowNoise(Texture3D<float> noise, SamplerState samplerState, float3 uvw) {
+    return makeSigned(noise.SampleLevel(samplerState, uvw, 0));
+}
+
+float sampleMidNoise(Texture3D<float> noise, SamplerState samplerState, float3 uvw) {
+    float3 t = frac(uvw * NOISE_VOLUME_SIZE + 0.5);
+    float3 t2 = (3 - 2 * t) * t * t;
+    float3 uvw2 = uvw + (t2 - t) / (float)(NOISE_VOLUME_SIZE);
+    
+    return makeSigned(noise.SampleLevel(samplerState, uvw2, 0));
+}
+
+#pragma kernel ComputeDensity
+[numthreads(8, 8, 8)]
+void ComputeDensity(uint3 id : SV_DispatchThreadID) {
+    int3 pointCoordinates = int3(id) - 1;
+    // -1 is a shift, (0, 0, 0) id represents point (-1, -1, -1)
+
+    float resolutionFactor = 2.0f;
+    float3 samplePosition = resolutionFactor * (float3(pointCoordinates.xyz) + 0.5) / (NOISE_VOLUME_SIZE);
+    
+    float density = -pointCoordinates.y / float(2 * NOISE_VOLUME_SIZE);
+    
+    density += sampleLowNoise(randomNoiseVolume1, sampler_randomNoiseVolume0, samplePosition * 0.1600 * 1.021) * 0.32 * 1.16 / resolutionFactor;
+    density += sampleLowNoise(randomNoiseVolume2, sampler_randomNoiseVolume0, samplePosition * 0.0800 * 0.985) * 0.64 * 1.12 / resolutionFactor;
+    density += sampleLowNoise(randomNoiseVolume0, sampler_randomNoiseVolume0, samplePosition * 0.0400 * 1.051) * 1.28 * 1.08 / resolutionFactor;
+    density += sampleLowNoise(randomNoiseVolume1, sampler_randomNoiseVolume0, samplePosition * 0.0200 * 1.020) * 2.56 * 1.04 / resolutionFactor;
+    density += sampleLowNoise(randomNoiseVolume3, sampler_randomNoiseVolume0, samplePosition * 0.0100 * 0.968) * 5 / resolutionFactor;
+    density += sampleMidNoise(randomNoiseVolume0, sampler_randomNoiseVolume0, samplePosition * 0.0050 * 0.994) * 10 * 1.0 / resolutionFactor;
+    density += sampleMidNoise(randomNoiseVolume2, sampler_randomNoiseVolume0, /*c6*/ samplePosition * 0.0025 * 1.045) * 20 * 0.9 / resolutionFactor; // rotated
+        
+    DENSITY_IN(id) = density;
+}
+
+struct Vertex {
+    float3 pos;
+    float3 norm;
+};
+
+struct Triangle {
+    Vertex v[3];
+};
+
+#define MAX_NUMBER_OF_TRIANGS_IN_VOXEL 5
+
+cbuffer CB {
+    int caseToTrianglesCount[256];
+    int3 caseToVertices[256 * MAX_NUMBER_OF_TRIANGS_IN_VOXEL];
+    int2 edgeIndexToVertices[12];
+};
+
+AppendStructuredBuffer<Triangle> triangles;
+
+#pragma kernel MarchingCubes
+[numthreads(8, 8, 8)]
+void MarchingCubes(uint3 id : SV_DispatchThreadID) {
+    int3 pointCoordinates = int3(id);
+    
+    int3 v[8];
+    v[0] = pointCoordinates + int3(0, 0, 0);
+    v[1] = pointCoordinates + int3(0, 1, 0);
+    v[2] = pointCoordinates + int3(1, 1, 0);
+    v[3] = pointCoordinates + int3(1, 0, 0);
+    v[4] = pointCoordinates + int3(0, 0, 1);
+    v[5] = pointCoordinates + int3(0, 1, 1);
+    v[6] = pointCoordinates + int3(1, 1, 1);
+    v[7] = pointCoordinates + int3(1, 0, 1);
+    
+    float f[8];
+    float3 n[8];
+    
+    int3 samplingShift = 1;
+    
+    [unroll]
+    for (int i = 0; i < 8; ++i) {
+        int3 basePoint = v[i] + samplingShift;
+        
+        int3 leftPoint = basePoint + int3(-1, 0, 0);
+        int3 rightPoint = basePoint + int3(1, 0, 0);
+        n[i].x = DENSITY_IN(leftPoint) - DENSITY_IN(rightPoint);
+        
+        int3 downPoint = basePoint + int3(0, -1, 0);
+        int3 upPoint = basePoint + int3(0, 1, 0);
+        n[i].y = DENSITY_IN(downPoint) - DENSITY_IN(upPoint);
+        
+        int3 backPoint = basePoint + int3(0, 0, -1);
+        int3 forwardPoint = basePoint + int3(0, 0, 1);
+        n[i].z = DENSITY_IN(backPoint) - DENSITY_IN(forwardPoint);
+
+        f[i] = DENSITY_IN(basePoint);
+    }
+    
+    uint voxelCase = 0;
+    
+    [unroll]
+    for (uint i = 0; i < 8; ++i) {
+        if (f[i] >= 0.0f) {
+            voxelCase |= (1 << i);
+        } else {
+            f[i] *= -1;
+        }
+    }
+
+    [unroll(MAX_NUMBER_OF_TRIANGS_IN_VOXEL)]
+    for (uint i = 0; i < caseToTrianglesCount[voxelCase]; ++i) {
+        int3 indices = caseToVertices[voxelCase * MAX_NUMBER_OF_TRIANGS_IN_VOXEL + i];
+        
+        Triangle triang;
+        
+        [unroll]
+        for (int j = 0; j < 3; ++j) {
+            int edgeIndex = indices[j];
+            int2 vertexIndices = edgeIndexToVertices[edgeIndex];
+            int ai = vertexIndices.x, bi = vertexIndices.y;
+            
+            float fa = f[ai], fb = f[bi];
+            float3 a = v[ai], b = v[bi];
+            float3 na = n[ai], nb = n[bi];
+            
+            float t = fa / (fa + fb);
+            
+            triang.v[j].pos = lerp(a, b, t);
+            triang.v[j].norm = normalize(lerp(na, nb, t));
+        }
+        
+        triangles.Append(triang);
+    }
+}
